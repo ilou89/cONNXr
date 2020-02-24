@@ -389,7 +389,7 @@ int main(int argc, char **argv)
   //CU_add_test(onnxBackendSuite,"test_qlinearconv",test_qlinearconv),
   //CU_add_test(onnxBackendSuite,"test_qlinearmatmul_2D",test_qlinearmatmul_2D),
   //CU_add_test(onnxBackendSuite,"test_qlinearmatmul_3D",test_qlinearmatmul_3D),
-  CU_add_test(onnxBackendSuite,"test_quantizelinear",test_quantizelinear),
+  //CU_add_test(onnxBackendSuite,"test_quantizelinear",test_quantizelinear),
   //CU_add_test(onnxBackendSuite,"test_range_float_type_positive_delta",test_range_float_type_positive_delta),
   //CU_add_test(onnxBackendSuite,"test_range_float_type_positive_delta_expanded",test_range_float_type_positive_delta_expanded),
   //CU_add_test(onnxBackendSuite,"test_range_int32_type_negative_delta",test_range_int32_type_negative_delta),
@@ -637,7 +637,7 @@ int main(int argc, char **argv)
    * is provided */
   CU_add_test(modelsTestSuite, "test_model_mnist", test_model_mnist);
   //CU_add_test(modelsTestSuite, "test_model_mnist_per_node", test_model_mnist_per_node);
-  //CU_add_test(modelsTestSuite, "test_model_tinyyolov2", test_model_tinyyolov2);
+  CU_add_test(modelsTestSuite, "test_model_tinyyolov2", test_model_tinyyolov2);
   //CU_add_test(modelsTestSuite, "test_model_super_resolution", test_model_super_resolution);
 
   CU_basic_set_mode(CU_BRM_VERBOSE);
@@ -656,6 +656,13 @@ int main(int argc, char **argv)
     CU_pSuite suite2run = CU_get_suite(argv[1]);
     CU_pTest test2run = CU_get_test(suite2run, argv[2]);
     CU_basic_run_test(suite2run, test2run);
+  }
+
+  printf("CU_get_number_of_tests_run is %d\n", CU_get_number_of_tests_run());
+  printf("CU_get_number_of_tests_failed is %d\n", CU_get_number_of_tests_failed());
+  // TODO Temporal hackish solution to force CI to fail
+  if (CU_get_number_of_tests_failed() != 0){
+    exit (1);
   }
 
   CU_cleanup_registry();
