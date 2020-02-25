@@ -120,6 +120,11 @@ int operator_convinteger(size_t n_input,
 
                 int32_t val = (valid != 0) ? valBeforeScaling : 0;
                 int index_kernel = k*input[1]->dims[3]*input[1]->dims[2]*input[1]->dims[1] + d*input[1]->dims[3]*input[1]->dims[2] + n*h_kernel + m; // change h_kernel by W->dims[x]
+
+                if ( input[1]->has_raw_data != NULL ) {
+                    convertRawDataOfTensorProto(input[1]);
+                }
+
                 value += val * input[1]->int32_data[index_kernel];
                 //TRACE_LEVEL0("%fx%f+\n", val, input[1]->float_data[index_kernel]);
               }
