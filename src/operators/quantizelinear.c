@@ -29,6 +29,11 @@ int operator_quantizelinear(size_t n_input,
 {
     TRACE_LEVEL0("Calling operator_quantizelinear\n");
 
+    //Prevent invalid input type
+    if ( input[0]->data_type == 0 ) {
+        input[0]->data_type = ONNX__TENSOR_PROTO__DATA_TYPE__FLOAT;
+    }
+
     // Initialize "output" tensor
     if ( n_input == 3 ) {
         output[0]->data_type = input[2]->data_type;
@@ -39,7 +44,7 @@ int operator_quantizelinear(size_t n_input,
     }
 
     output[0]->has_raw_data = 0;
-    output[0]->dims         = malloc(input[0]->n_dims * sizeof(output[0]->data_type));
+    output[0]->dims         = malloc(input[0]->n_dims * sizeof(uint64_t));
     output[0]->n_dims       = input[0]->n_dims;
 
     for (int i = 0; i < output[0]->n_dims; i++)
@@ -49,6 +54,7 @@ int operator_quantizelinear(size_t n_input,
 
     output[0]->n_int32_data = input[0]->n_float_data;
     output[0]->int32_data   = malloc(output[0]->n_int32_data * sizeof(int32_t));
+
 
     //From spec, input is full range (float/int32) thus no need to handle all types
     switch ( input[0]->data_type ) {
@@ -68,13 +74,13 @@ int operator_quantizelinear(size_t n_input,
                 }
             }
             break;
-            case ONNX__TENSOR_PROTO__DATA_TYPE__INT32:
+        case ONNX__TENSOR_PROTO__DATA_TYPE__INT32:
             {
                 //TODO complete similarly to FLOAT
             }
             break;
         default:
-            printf("Wrong input type!!\n");
+            printf("Wrong input type!! Type is %d\n", input[0]->data_type);
             return 1;
             break;
     }
