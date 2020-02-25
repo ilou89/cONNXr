@@ -5,18 +5,21 @@
 #include "../trace.h"
 #include "operators.h"
 
-/* TODO not very nice, rethink this. Round to even:
-https://en.wikipedia.org/wiki/Rounding
-*/
-int32_t divAndRoundEven(float a, float b)
+static int32_t divAndRoundEven(float a, float b)
 {
-  int32_t AdivB = (int32_t)(a/b);
+    int32_t quotient  = (int32_t)(a/b); // implicit floor
+    int32_t remainder = a - b*quotient;
 
-  /* TODO: AdivB has to be rounded to even! Not implemented*/
+    if ( remainder > 0 ) {
+        quotient++;
+    }
 
-  return AdivB;
+    return quotient;
 }
 
+// Spec https://github.com/onnx/onnx/blob/master/docs/Operators.md#QuantizeLinear
+// y = saturate ((x / y_scale) + y_zero_point)
+// output[0] = saturate(input[0]/input[1] + input[2])
 int operator_quantizelinear(size_t n_input,
                             Onnx__TensorProto **input,
                             size_t n_attribute,
@@ -24,49 +27,57 @@ int operator_quantizelinear(size_t n_input,
                             size_t n_output,
                             Onnx__TensorProto **output)
 {
-  TRACE_LEVEL0("Calling operator_quantizelinear\n");
-  if (0){
-    /* TODO: Check some conditions. For example if a specific
-     * functionality is not supported */
-    return 1;
-  }
+    TRACE_LEVEL0("Calling operator_quantizelinear\n");
 
-  output[0]->dims   = malloc(input[0]->n_dims * sizeof(int64_t));
-  output[0]->n_dims = input[0]->n_dims;
-
-  for (int i = 0; i < output[0]->n_dims; i++)
-  {
-    output[0]->dims[i] = input[0]->dims[i];
-  }
-  output[0]->has_raw_data = 0;
-
-  printf("%f\n", input[1]->float_data[0]);
-
-  printf("%d\n", input[2]->int32_data[0]);
-
-  /* TODO hardcoded to uint8
-   [0, 255] if it's uint8, or [-128, 127] if it's int8.*/
-  output[0]->data_type = ONNX__TENSOR_PROTO__DATA_TYPE__UINT8;
-
-  output[0]->n_int32_data = input[0]->n_float_data;
-  output[0]->int32_data = malloc(output[0]->n_int32_data * sizeof(int32_t));
-  /* TODO Only FLOAT is handled*/
-  printf("type = %d\n", input[0]->data_type);
-  if (input[0]->data_type == ONNX__TENSOR_PROTO__DATA_TYPE__FLOAT){
-    /* TODO third parameter is options, its assumed its always there */
-    if (n_input != 3){return 1;}
-    for(int i = 0; i < output[0]->n_int32_data; i++){
-      int32_t value = divAndRoundEven(input[0]->float_data[i], input[1]->float_data[0]);/* +
-                      input[2]->int32_data[0];*/
-      /* TODO Quick implementation. Find a better way to saturate and avoid negative */
-      value > 255 ? value = 255 : value;
-      value < 0   ? value = 0   : value;
-      output[0]->int32_data[i] = value;
+    // Initialize "output" tensor
+    if ( n_input == 3 ) {
+        output[0]->data_type = input[2]->data_type;
+    } else {
+        // TODO: uint8 [0, 255] or int8 [ -128, 127 ],
+        // retrieve 'scale' info according to spec -----> input[1]
+        output[0]->data_type = ONNX__TENSOR_PROTO__DATA_TYPE__UINT8;
     }
-  }else{
-    printf("wrong type %d\n", input[0]->data_type);
-    return 1;
-  }
 
-  return 0;
+    output[0]->has_raw_data = 0;
+    output[0]->dims         = malloc(input[0]->n_dims * sizeof(output[0]->data_type));
+    output[0]->n_dims       = input[0]->n_dims;
+
+    for (int i = 0; i < output[0]->n_dims; i++)
+    {
+      output[0]->dims[i] = input[0]->dims[i];
+    }
+
+    output[0]->n_int32_data = input[0]->n_float_data;
+    output[0]->int32_data   = malloc(output[0]->n_int32_data * sizeof(int32_t));
+
+    //From spec, input is full range (float/int32) thus no need to handle all types
+    switch ( input[0]->data_type ) {
+        case ONNX__TENSOR_PROTO__DATA_TYPE__FLOAT:
+            {
+                for ( int i = 0; i < output[0]->n_int32_data; ++i ) {
+                    int32_t value = divAndRoundEven(input[0]->float_data[i], input[1]->float_data[0]);
+
+                    if ( n_input == 3 ) {
+                        value += input[2]->int32_data[0];
+                    }
+
+                    //TODO saturate either to [0, 255] or [-128, 127]
+                    value > 255 ? value = 255 : value;
+                    value < 0   ? value = 0   : value;
+                    output[0]->int32_data[i] = value;
+                }
+            }
+            break;
+            case ONNX__TENSOR_PROTO__DATA_TYPE__INT32:
+            {
+                //TODO complete similarly to FLOAT
+            }
+            break;
+        default:
+            printf("Wrong input type!!\n");
+            return 1;
+            break;
+    }
+
+    return 0;
 }
