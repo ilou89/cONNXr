@@ -56,7 +56,7 @@ int main(int argc, char **argv)
    * be updated
    */
 
-  //CU_add_test(onnxBackendSuite,"test_abs",test_abs),
+  CU_add_test(onnxBackendSuite,"test_abs",test_abs),
   //CU_add_test(onnxBackendSuite,"test_acos",test_acos),
   //CU_add_test(onnxBackendSuite,"test_acos_example",test_acos_example),
   //CU_add_test(onnxBackendSuite,"test_acosh",test_acosh),
